@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Popup as Tab</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="popup-shell">
+      <header class="app-header">
+        <div class="brand">
+          <img class="app-icon" src="icons/icon48.png" alt="">
+          <h1>Popup as Tab</h1>
+        </div>
+
+        <label class="switch" title="Enable Popup as Tab">
+          <span class="sr-only">Enable Popup as Tab</span>
+          <input id="enabled" type="checkbox" role="switch">
+          <span class="switch-track" aria-hidden="true"></span>
+        </label>
+      </header>
+
+      <section class="setting-row" aria-labelledby="popup-placement-title">
+        <div class="setting-copy">
+          <h2 id="popup-placement-title">Popup tab position</h2>
+        </div>
+
+        <select
+          id="popup-placement"
+          class="select-control"
+          aria-labelledby="popup-placement-title"
+          title="Choose how converted popup tabs are positioned"
+          disabled
+        >
+          <option value="opening-order">Opening order</option>
+          <option value="beside-opener">Beside opener</option>
+        </select>
+      </section>
+
+      <section class="setting-row" aria-labelledby="new-tab-placement-title">
+        <div class="setting-copy">
+          <h2 id="new-tab-placement-title">New tab position</h2>
+        </div>
+
+        <select
+          id="new-tab-next-to-current"
+          class="select-control"
+          aria-labelledby="new-tab-placement-title"
+          title="Choose where new tabs are positioned"
+          disabled
+        >
+          <option value="beside">Beside current</option>
+          <option value="default">Browser default</option>
+        </select>
+      </section>
+
+      <section class="rules-panel" aria-labelledby="rules-title">
+        <div class="rules-header">
+          <h2 id="rules-title">Excluded <span id="rule-count" class="counter" aria-label="0 exclusion rules">0</span></h2>
+          <button
+            id="add-current-page"
+            class="button button-secondary"
+            type="button"
+            title="Exclude current site"
+            disabled
+          >
+            <span id="add-current-label">Exclude</span>
+          </button>
+        </div>
+
+        <textarea
+          id="excluded-urls"
+          rows="5"
+          aria-label="Excluded URL rules"
+          spellcheck="false"
+          autocomplete="off"
+          placeholder="example.com&#10;example.org/login"
+        ></textarea>
+
+      </section>
+
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

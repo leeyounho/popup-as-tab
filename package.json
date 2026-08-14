@@ -1,0 +1,16 @@
+{
+  "name": "popup-as-tab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/background.js",
+  "scripts": {
+    "build": "tsc",
+    "package": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1",
+    "test": "npm run build && node --test --test-isolation=none tests/background.test.cjs tests/popup.test.cjs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.5.3"
+  },
+  "private": true
+}
