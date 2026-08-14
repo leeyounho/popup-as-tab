@@ -45,8 +45,8 @@ function renderEnabled(enabled) {
 }
 
 function renderPopupPlacement(placement) {
-  popupPlacementSelect.value = placement === "besideOpener"
-    ? "beside-opener"
+  popupPlacementSelect.value = placement === "besideCurrent"
+    ? "beside-current"
     : "opening-order";
 }
 
@@ -220,8 +220,8 @@ enabledInput.addEventListener("change", () => {
 });
 
 popupPlacementSelect.addEventListener("change", () => {
-  const popupPlacement = popupPlacementSelect.value === "beside-opener"
-    ? "besideOpener"
+  const popupPlacement = popupPlacementSelect.value === "beside-current"
+    ? "besideCurrent"
     : "openingOrder";
   popupPlacementSaving = true;
   renderPopupPlacementAvailability();
@@ -229,7 +229,7 @@ popupPlacementSelect.addEventListener("change", () => {
     popupPlacementSaving = false;
     const error = chrome.runtime.lastError?.message;
     if (error) {
-      renderPopupPlacement(popupPlacement === "besideOpener" ? "openingOrder" : "besideOpener");
+      renderPopupPlacement(popupPlacement === "besideCurrent" ? "openingOrder" : "besideCurrent");
     }
     renderPopupPlacementAvailability();
   });

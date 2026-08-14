@@ -150,10 +150,10 @@ h2 {
 }
 
 .setting-row {
-  min-height: 44px;
+  min-height: 40px;
   justify-content: space-between;
   gap: 12px;
-  padding: 7px 12px;
+  padding: 5px 12px;
   border-bottom: 1px solid var(--border-muted);
 }
 

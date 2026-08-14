@@ -240,14 +240,14 @@ test("the Popup tab position select loads and persists the selected behavior", (
   assert.equal(placementSelect.value, "opening-order");
   assert.equal(placementSelect.disabled, false);
 
-  placementSelect.value = "beside-opener";
+  placementSelect.value = "beside-current";
   placementSelect.emit("change");
 
   assert.deepEqual(
     JSON.parse(JSON.stringify(harness.storageSets)),
-    [{ popupPlacement: "besideOpener" }],
+    [{ popupPlacement: "besideCurrent" }],
   );
-  assert.equal(placementSelect.value, "beside-opener");
+  assert.equal(placementSelect.value, "beside-current");
   assert.equal(placementSelect.disabled, false);
 });
 
@@ -297,7 +297,8 @@ test("the position selects are unavailable while the extension is off", () => {
 test("the popup paints every root surface and keeps setting rows on one line", () => {
   assert.match(popupCss, /html,\s*body,\s*\.popup-shell\s*{[^}]*background-color:/s);
   assert.doesNotMatch(popupCss, /html\s*{[^}]*overflow:\s*hidden/s);
-  assert.match(popupCss, /\.setting-row\s*{[^}]*min-height:\s*44px/s);
+  assert.match(popupCss, /\.setting-row\s*{[^}]*min-height:\s*40px/s);
+  assert.match(popupCss, /\.setting-row\s*{[^}]*padding:\s*5px 12px/s);
   assert.match(popupCss, /\.select-control\s*{[^}]*height:\s*28px/s);
   assert.doesNotMatch(popupHtml, /class="setting-hint"/);
 });
@@ -308,7 +309,7 @@ test("the popup uses a compact position choice and no feedback notice", () => {
   assert.doesNotMatch(popupHtml, /Popup to Tab/);
   assert.match(popupHtml, />Popup tab position</);
   assert.match(popupHtml, /<option value="opening-order">Opening order<\/option>/);
-  assert.match(popupHtml, /<option value="beside-opener">Beside opener<\/option>/);
+  assert.match(popupHtml, /<option value="beside-current">Beside current<\/option>/);
   assert.match(popupHtml, />New tab position</);
   assert.match(popupHtml, /<option value="beside">Beside current<\/option>/);
   assert.match(popupHtml, /<option value="default">Browser default<\/option>/);

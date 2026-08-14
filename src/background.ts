@@ -9,7 +9,7 @@ const DIAGNOSTIC_BADGE_ALARM = "diagnosticBadgeExpiry";
 const NORMAL_WINDOW = "normal";
 const POPUP_WINDOW = "popup";
 const OPENING_ORDER_POPUP_PLACEMENT = "openingOrder";
-const BESIDE_OPENER_POPUP_PLACEMENT = "besideOpener";
+const BESIDE_CURRENT_POPUP_PLACEMENT = "besideCurrent";
 const MAX_MOVE_RETRIES = 4;
 const MAX_POPUP_TAB_RETRIES = 12;
 const MAX_SETTINGS_LOAD_RETRIES = 3;
@@ -31,7 +31,7 @@ const PROTECTED_URL_PROTOCOLS = new Set([
 
 type PopupPlacement =
   | typeof OPENING_ORDER_POPUP_PLACEMENT
-  | typeof BESIDE_OPENER_POPUP_PLACEMENT;
+  | typeof BESIDE_CURRENT_POPUP_PLACEMENT;
 
 let enabled = true;
 let settingsLoaded = false;
@@ -129,8 +129,8 @@ function normalizeExcludedUrls(value: unknown): string[] {
 }
 
 function normalizePopupPlacement(value: unknown): PopupPlacement {
-  return value === BESIDE_OPENER_POPUP_PLACEMENT
-    ? BESIDE_OPENER_POPUP_PLACEMENT
+  return value === BESIDE_CURRENT_POPUP_PLACEMENT
+    ? BESIDE_CURRENT_POPUP_PLACEMENT
     : OPENING_ORDER_POPUP_PLACEMENT;
 }
 

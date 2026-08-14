@@ -363,6 +363,7 @@ test("loads initial settings and displays the action badge", () => {
   });
 });
 
+
 test("clears an expired diagnostic badge when its alarm fires", () => {
   const harness = createHarness({
     storage: {
@@ -1368,7 +1369,7 @@ test("preserves creation order for consecutive popups from the same opener", () 
 test("places each consecutive popup beside its opener when configured", () => {
   const harness = createHarness({
     deferMoves: true,
-    storage: { popupPlacement: "besideOpener" },
+    storage: { popupPlacement: "besideCurrent" },
     windows: [normalWindow(10), popupWindow(20), popupWindow(21)],
     tabs: [
       { id: 100, windowId: 10, index: 0, active: true },
@@ -1407,7 +1408,7 @@ test("applies Popup tab position changes immediately", () => {
   harness.events.windowCreated.emit(popupWindow(20));
   harness.flushNextMove();
   harness.events.storageChanged.emit(
-    { popupPlacement: { oldValue: "openingOrder", newValue: "besideOpener" } },
+    { popupPlacement: { oldValue: "openingOrder", newValue: "besideCurrent" } },
     "local",
   );
   harness.events.windowCreated.emit(popupWindow(21));
