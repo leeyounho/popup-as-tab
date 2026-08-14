@@ -4,9 +4,12 @@
   "description": "",
   "main": "dist/background.js",
   "scripts": {
-    "build": "tsc",
+    "clean": "node tools/clean.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "npm run clean && tsc -p tsconfig.json && node tools/copy-static.mjs",
     "package": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/package-extension.ps1",
-    "test": "npm run build && node --test --test-isolation=none tests/background.test.cjs tests/popup.test.cjs"
+    "test": "npm run build && node --test --test-isolation=none tests/background.test.cjs tests/popup.test.cjs",
+    "verify": "npm run typecheck && npm test && node tools/validate-dist.mjs"
   },
   "dependencies": {},
   "devDependencies": {

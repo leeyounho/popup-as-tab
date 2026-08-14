@@ -11,7 +11,7 @@
     "128": "icons/icon128-sized.png"
   },
   "background": {
-    "service_worker": "dist/background.js"
+    "service_worker": "background.js"
   },
   "action": {
     "default_title": "Popup as Tab",

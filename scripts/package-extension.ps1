@@ -5,7 +5,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $projectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$manifestPath = Join-Path $projectRoot "manifest.json"
+$distDirectory = Join-Path $projectRoot "dist"
+$manifestPath = Join-Path $distDirectory "manifest.json"
 $releaseDirectory = Join-Path $projectRoot "release"
 $stagingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) (
   "popup-as-tab-package-" + [System.Guid]::NewGuid().ToString("N")
@@ -13,7 +14,7 @@ $stagingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) (
 
 $packageFiles = @(
   "manifest.json"
-  "dist/background.js"
+  "background.js"
   "popup.html"
   "popup.css"
   "popup.js"
@@ -28,7 +29,7 @@ try {
   if ($SkipTests) {
     & npm.cmd run build
   } else {
-    & npm.cmd test
+    & npm.cmd run verify
   }
   if ($LASTEXITCODE -ne 0) {
     throw "Build or tests failed with exit code $LASTEXITCODE."
@@ -44,7 +45,7 @@ try {
 
   New-Item -ItemType Directory -Path $stagingDirectory | Out-Null
   foreach ($relativePath in $packageFiles) {
-    $sourcePath = Join-Path $projectRoot $relativePath
+    $sourcePath = Join-Path $distDirectory $relativePath
     if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
       throw "Required package file is missing: $relativePath"
     }
