@@ -1,4 +1,7 @@
 declare namespace chrome {
+  namespace commands {
+    const onCommand: Event<(command: string, tab?: tabs.Tab) => void>;
+  }
   namespace alarms {
     interface Alarm { name: string; scheduledTime: number; }
     const onAlarm: Event<(alarm: Alarm) => void>;
@@ -38,6 +41,7 @@ declare namespace chrome {
     const onFocusChanged: Event<(windowId: number) => void>;
     const onRemoved: Event<(windowId: number) => void>;
     function get(windowId: number, callback: (window: Window) => void): void;
+    function getCurrent(callback: (window: Window) => void): void;
     function getAll(getInfo: { windowTypes?: WindowType[] }, callback: (windows: Window[]) => void): void;
     function update(windowId: number, updateInfo: { focused?: boolean }, callback?: (window: Window) => void): void;
   }
@@ -63,6 +67,7 @@ declare namespace chrome {
       tab: Tab,
     ) => void>;
     function query(queryInfo: { windowId?: number; active?: boolean }, callback: (tabs: Tab[]) => void): void;
+    function create(properties: { windowId?: number; index: number; active: boolean }): Promise<Tab>;
     function get(tabId: number, callback: (tab: Tab) => void): void;
     function group(groupOptions: { tabIds: number | number[]; groupId?: number }, callback?: (groupId: number) => void): void;
     function move(tabIds: number | number[], moveProperties: { windowId: number; index: number }, callback?: (tabs: Tab | Tab[]) => void): void;

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Popup as Tab",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Popup as Tab converts popup windows into regular tabs in your current browser window.",
   "permissions": ["alarms", "storage", "tabs"],
   "icons": {
@@ -12,6 +12,12 @@
   },
   "background": {
     "service_worker": "background.js"
+  },
+  "commands": {
+    "open-tab-at-end": {
+      "suggested_key": { "default": "Alt+T" },
+      "description": "Open a new tab at the end of the current window"
+    }
   },
   "action": {
     "default_title": "Popup as Tab",

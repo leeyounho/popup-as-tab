@@ -1,6 +1,6 @@
 {
   "name": "popup-as-tab",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "",
   "main": "dist/background.js",
   "scripts": {

@@ -56,6 +56,7 @@ function createHarness(options = {}) {
 
   const events = {
     alarm: createEvent(),
+    command: createEvent(),
     installed: createEvent(),
     startup: createEvent(),
     storageChanged: createEvent(),
@@ -89,6 +90,7 @@ function createHarness(options = {}) {
   }
 
   const chrome = {
+    commands: { onCommand: events.command },
     alarms: {
       onAlarm: events.alarm,
       create(name, alarmInfo) {
@@ -157,6 +159,9 @@ function createHarness(options = {}) {
       onCreated: events.windowCreated,
       onFocusChanged: events.windowFocusChanged,
       onRemoved: events.windowRemoved,
+      getCurrent(callback) {
+        callback([...windowMap.values()].find((window) => window.focused));
+      },
       get(windowId, callback) {
         const window = windowMap.get(windowId);
         if (!window) {
@@ -180,6 +185,7 @@ function createHarness(options = {}) {
       },
     },
     tabs: {
+      create: options.createTab,
       onActivated: events.tabActivated,
       onCreated: events.tabCreated,
       onRemoved: events.tabRemoved,
@@ -448,6 +454,114 @@ test("leaves a target=_blank normal tab at the browser-selected position", () =>
 
   harness.events.tabCreated.emit({ ...harness.tabMap.get(101) });
   assert.equal(harness.calls.moves.length, 0);
+});
+
+test("the end-tab command bypasses adjacent placement only for the tab it creates", async () => {
+  const current = { id: 100, windowId: 10, index: 0, active: true };
+  let finishCreation;
+  const harness = createHarness({
+    windows: [normalWindow(10)],
+    tabs: [current, { id: 101, windowId: 10, index: 1 }],
+    createTab(properties) {
+      assert.equal(properties.active, true);
+      assert.equal(properties.windowId, current.windowId);
+      assert.ok(properties.index >= 2);
+      return new Promise((resolve) => { finishCreation = resolve; });
+    },
+  });
+
+  harness.events.command.emit("open-tab-at-end", current);
+  const ordinary = { id: 102, windowId: 10, index: 2, url: "chrome://newtab/" };
+  const shortcut = { ...ordinary, id: 103, index: 3 };
+  for (const tab of [ordinary, shortcut]) {
+    harness.tabMap.set(tab.id, tab);
+    harness.events.tabCreated.emit({ ...tab });
+  }
+  finishCreation(shortcut);
+  await new Promise(setImmediate);
+
+  assert.deepEqual(harness.calls.moves, [{ tabIds: [102], windowId: 10, index: 1 }]);
+  assert.equal(harness.tabMap.get(shortcut.id).index, 3);
+});
+
+test("recognizes the shortcut tab when its New Tab URL arrives later", async () => {
+  const current = { id: 100, windowId: 10, index: 0, active: true };
+  const shortcut = { id: 102, windowId: 10, index: 2 };
+  const harness = createHarness({
+    windows: [normalWindow(10)],
+    tabs: [current, { id: 101, windowId: 10, index: 1 }, shortcut],
+    createTab: async () => shortcut,
+  });
+  harness.events.command.emit("open-tab-at-end", current);
+  await new Promise(setImmediate);
+  harness.events.tabCreated.emit(shortcut);
+  harness.events.tabUpdated.emit(shortcut.id, { url: "edge://newtab/" }, shortcut);
+  assert.deepEqual(harness.calls.moves, []);
+});
+
+test("the end-tab command follows the switch before and after startup", () => {
+  for (const initiallyEnabled of [false, true]) {
+    const createdIn = [];
+    const harness = createHarness({
+      deferInitialStorageGet: true,
+      storage: { enabled: initiallyEnabled },
+      createTab: async ({ windowId }) => {
+        createdIn.push(windowId);
+        return { id: createdIn.length, windowId };
+      },
+    });
+    const press = (windowId) => harness.events.command.emit("open-tab-at-end", { windowId });
+    press(10);
+    press(20);
+    assert.deepEqual(createdIn, []);
+    harness.flushInitialStorageGet();
+    const expected = initiallyEnabled ? [10, 20] : [];
+    assert.deepEqual(createdIn, expected);
+    harness.events.storageChanged.emit({ enabled: { newValue: false } }, "local");
+    press(10);
+    assert.deepEqual(createdIn, expected);
+    harness.events.storageChanged.emit({ enabled: { newValue: true } }, "local");
+    press(20);
+    assert.deepEqual(createdIn, [...expected, 20]);
+  }
+});
+
+test("turning off cancels a startup shortcut even if switched back on", () => {
+  const harness = createHarness({
+    deferInitialStorageGet: true,
+    createTab: () => assert.fail("cancelled shortcut opened a tab"),
+  });
+  harness.events.command.emit("open-tab-at-end", { windowId: 10 });
+  harness.events.storageChanged.emit({ enabled: { newValue: false } }, "local");
+  harness.events.command.emit("open-tab-at-end", { windowId: 10 });
+  harness.events.storageChanged.emit({ enabled: { newValue: true } }, "local");
+  harness.flushInitialStorageGet();
+});
+
+test("a shortcut never delays another window's New Tab placement", async () => {
+  // Also exercise onCommand without a tab, when only the focused window is known.
+  for (const commandTab of [{ windowId: 10 }, undefined]) {
+    let finishCreation;
+    const reference = { id: 200, windowId: 20, index: 0, active: true };
+    const harness = createHarness({
+      windows: [normalWindow(10), { ...normalWindow(20), focused: false }],
+      tabs: [reference, { id: 201, windowId: 20, index: 1 }],
+      createTab({ windowId }) {
+        assert.equal(windowId, 10);
+        return new Promise((resolve) => { finishCreation = resolve; });
+      },
+    });
+    harness.events.command.emit("open-tab-at-end", commandTab);
+    const ordinary = { id: 202, windowId: 20, index: 2, url: "chrome://newtab/" };
+    harness.tabMap.set(ordinary.id, ordinary);
+    harness.events.tabCreated.emit(ordinary);
+    assert.deepEqual(harness.calls.moves, [{ tabIds: [202], windowId: 20, index: 1 }]);
+    harness.tabMap.delete(reference.id);
+    harness.events.tabRemoved.emit(reference.id);
+    finishCreation({ id: 101, windowId: 10 });
+    await new Promise(setImmediate);
+    assert.ok(harness.tabMap.get(202).index < harness.tabMap.get(201).index);
+  }
 });
 
 test("places a newly created New Tab page directly after the current tab", () => {

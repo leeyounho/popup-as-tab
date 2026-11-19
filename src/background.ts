@@ -51,6 +51,9 @@ let newTabNextToCurrent = true;
 const lastNormalWindow = new Map<boolean, number>();
 const pendingPopups: chrome.windows.Window[] = [];
 const pendingCreatedTabs: chrome.tabs.Tab[] = [];
+const queuedEndTabWindows: number[] = [];
+const endTabCreationsByWindow = new Map<number, Set<Promise<void>>>();
+const endTabIds = new Set<number>();
 const pendingNewTabUrls = new Map<number, {
   tab: chrome.tabs.Tab;
   referenceTabId?: number;
@@ -78,6 +81,7 @@ function consumeLastError(): boolean {
 
 function applyEnabled(nextEnabled: boolean): void {
   if (enabled !== nextEnabled) popupOperationGeneration += 1;
+  if (!nextEnabled) queuedEndTabWindows.length = 0;
   enabled = nextEnabled;
 }
 
@@ -456,6 +460,7 @@ function finishInitialization(): void {
   if (enabled) {
     for (const popup of queued) normalizePopup(popup);
     for (const tab of queuedTabs) handleCreatedTab(tab);
+    for (const windowId of queuedEndTabWindows.splice(0)) openTabAtEnd(windowId);
   }
 }
 
@@ -919,7 +924,7 @@ function handleCreatedTab(tab: chrome.tabs.Tab): void {
     .filter((url): url is string => Boolean(url));
   const referenceTabId = createdTabReferenceId(tab);
   if (urls.some(isNewTabPageUrl)) {
-    placeNewTabPageAfterCurrent(tab, referenceTabId);
+    scheduleNewTabPlacement(tab, referenceTabId);
   } else if (newTabUrlMayStillChange(urls)) {
     pendingNewTabUrls.set(tab.id, { tab, referenceTabId });
   }
@@ -938,7 +943,18 @@ function handlePendingNewTabUrl(
 
   pendingNewTabUrls.delete(tabId);
   if (enabled && newTabNextToCurrent && urls.some(isNewTabPageUrl)) {
-    placeNewTabPageAfterCurrent(tab, pending.referenceTabId);
+    scheduleNewTabPlacement(tab, pending.referenceTabId);
+  }
+}
+
+function scheduleNewTabPlacement(tab: chrome.tabs.Tab, referenceTabId?: number): void {
+  // onCreated can precede the create response. Only requests already issued in
+  // this window could have created this tab.
+  const pending = endTabCreationsByWindow.get(tab.windowId);
+  if (pending) {
+    void Promise.all(pending).then(() => placeNewTabPageAfterCurrent(tab, referenceTabId));
+  } else {
+    placeNewTabPageAfterCurrent(tab, referenceTabId);
   }
 }
 
@@ -948,6 +964,7 @@ function placeNewTabPageAfterCurrent(
 ): void {
   if (!enabled || !newTabNextToCurrent || tab.id === undefined) return;
   const tabId = tab.id;
+  if (endTabIds.delete(tabId)) return;
 
   chrome.windows.get(tab.windowId, (window) => {
     if (
@@ -1183,6 +1200,41 @@ chrome.windows.onFocusChanged.addListener((windowId) => {
   if (windowId !== chrome.windows.WINDOW_ID_NONE) rememberIfNormal(windowId);
 });
 
+function openTabAtEnd(windowId: number): void {
+  if (!enabled) return;
+  if (!settingsLoaded) {
+    queuedEndTabWindows.push(windowId);
+    return;
+  }
+  const pending = endTabCreationsByWindow.get(windowId) ?? new Set<Promise<void>>();
+  endTabCreationsByWindow.set(windowId, pending);
+  // Chrome clamps the index to the tab count at insertion time.
+  const creation = chrome.tabs.create({ windowId, index: 0x7fffffff, active: true })
+    .then((created) => {
+      if (created.id !== undefined) endTabIds.add(created.id);
+    })
+    .catch((error) => console.warn("Could not open a tab at the end of the window.", error))
+    .finally(() => {
+      pending.delete(creation);
+      if (pending.size === 0) endTabCreationsByWindow.delete(windowId);
+    });
+  pending.add(creation);
+}
+
+chrome.commands.onCommand.addListener((command, tab) => {
+  if (command !== "open-tab-at-end" || !enabled) return;
+  if (tab) {
+    openTabAtEnd(tab.windowId);
+    return;
+  }
+  const version = enabledChangeVersion;
+  chrome.windows.getCurrent((window) => {
+    if (!consumeLastError() && window?.id !== undefined && version === enabledChangeVersion) {
+      openTabAtEnd(window.id);
+    }
+  });
+});
+
 chrome.tabs.onCreated.addListener((tab) => {
   if (settingsLoaded) {
     handleCreatedTab(tab);
@@ -1199,6 +1251,7 @@ chrome.tabs.onActivated.addListener(({ tabId, windowId }) => {
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
+  endTabIds.delete(tabId);
   pendingNewTabUrls.delete(tabId);
   let changed = movedPopupTabsByOpener.delete(tabId);
   for (const [openerTabId, tabIds] of movedPopupTabsByOpener) {
